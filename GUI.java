@@ -11,8 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import static javax.swing.JOptionPane.showMessageDialog;
 
-public class GUI extends JFrame
-{
+public class GUI extends JFrame {
     private JPanel rootPanel;
     private JButton buttonTrain;
     private JPanel imagePanel;
@@ -24,8 +23,22 @@ public class GUI extends JFrame
     private JButton buttonTest;
     private NeuralNet neuralNet;
 
-    public GUI()
-    {
+    public GUI() {
+        rootPanel = new JPanel();
+        buttonTrain = new JButton("Train");
+        buttonTest = new JButton("Test");
+        labelEpoch = new JLabel();
+        labelError = new JLabel();
+        // imageLabel = new JLabel();
+        textAreaAnswer = new JTextArea();
+
+        rootPanel.add(buttonTest);
+        rootPanel.add(buttonTrain);
+        rootPanel.add(labelEpoch);
+        rootPanel.add(labelError);
+        // rootPanel.add(imageLabel);
+        rootPanel.add(textAreaAnswer);
+
         setContentPane(rootPanel);
         pack();
         setTitle("Обучение через дельта-правило");
@@ -47,20 +60,24 @@ public class GUI extends JFrame
         });
     }
 
-    public void train()
-    {
-        try
-        {
+    public void train() {
+        try {
             buttonTest.setEnabled(false);
-            Vector[] trainVectorSet = readTrainVectors("C://Train");
-            neuralNet = new NeuralNet(trainVectorSet[0].getX().length, trainVectorSet[0].getDesireOutputs().length);
+            Vector[] trainVectorSet = readTrainVectors("../Train/");
+            neuralNet = new NeuralNet(
+                trainVectorSet[0].getX().length, trainVectorSet[0].getDesireOutputs().length
+            );
             neuralNet.setComplete(false);
 
-            Runnable task1 = () -> { try { neuralNet.train(trainVectorSet); } catch (InterruptedException e) {} };
+            Runnable task1 = () -> {
+                try {
+                    neuralNet.train(trainVectorSet);
+                } catch (InterruptedException e) {
+                }
+            };
             Thread thread1 = new Thread(task1);
             Runnable task2 = () -> {
-                while (!neuralNet.isComplete())
-                {
+                while (!neuralNet.isComplete()) {
                     labelEpoch.setText("Номер эпохи: " + neuralNet.getEpochNumber());
                     labelError.setText("Ошибки нейронов: " + Arrays.toString(neuralNet.getError()));
                 }
@@ -71,88 +88,72 @@ public class GUI extends JFrame
 
             thread1.start();
             thread2.start();
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             showMessageDialog(null, "Файл не найден");
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             showMessageDialog(null, e.toString());
+            throw e;
         }
 
         int f = 0;
     }
 
     public void test() {
-        try
-        {
-            String path = "c://Test//";
-            for (int i = 0; i < 6; i++)
-            {
+        try {
+            String path = "../Test/";
+            for (int i = 0; i < 6; i++) {
                 File[] files = new File(path + i).listFiles();
-                for (File file : files)
-                {
+                for (File file : files) {
                     double[] testVector = readVector(file.getPath());
                     double[] answer = neuralNet.test(testVector);
                     textAreaAnswer.append(String.format("Тест-образ №%d = %s;%n", i, Arrays.toString(answer)));
-                    //textAreaAnswer.setCaretPosition(textAreaAnswer.getDocument().getLength());
+                    // textAreaAnswer.setCaretPosition(textAreaAnswer.getDocument().getLength());
                 }
             }
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             showMessageDialog(null, "Файл не найден");
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             showMessageDialog(null, e.toString());
+            throw e;
         }
     }
 
-    public double[] readVector(String path) throws IOException
-    {
+    public double[] readVector(String path) throws IOException {
         BufferedImage image = ImageIO.read(new File(path));
         int[][] grayImage = imageToGrayScale(image);
         double[] imageVector = imageToVector(grayImage);
         return imageVector;
     }
 
+    public Vector[] readTrainVectors(String rootDir) throws IOException {
+        List<Vector> trainVectorSet = new ArrayList<Vector>();
 
-    public Vector[] readTrainVectors(String rootDir) throws IOException
-    {
-        List<Vector> trainVectorSet = new ArrayList();
-
-        for (int i = 0; i < 6; i++)
-        {
-            File[] files = new File(rootDir + "//" + i).listFiles();
-            for (File file : files)
-            {
+        for (int i = 0; i < 6; i++) {
+            System.out.print(rootDir + i);
+            File[] files = new File(rootDir + i).listFiles();
+            for (File file : files) {
                 BufferedImage image = ImageIO.read(file);
 
                 int[][] grayImage = imageToGrayScale(image);
                 double[] imageVector = imageToVector(grayImage);
 
                 double[] desireOutputs = new double[6];
-                for (int k = 0; k < desireOutputs.length; k++)
-                {
+                for (int k = 0; k < desireOutputs.length; k++) {
                     desireOutputs[k] = i == k ? 1 : 0;
                 }
 
                 trainVectorSet.add(new Vector(imageVector, desireOutputs));
-                //imageLabel.setIcon(new ImageIcon(image));
+                rootPanel.add(new JLabel(new ImageIcon(image)));
+                // imageLabel.setIcon(new ImageIcon(image));
             }
         }
-        return (Vector[])trainVectorSet.toArray(new Vector[trainVectorSet.size()]);
+        return (Vector[]) trainVectorSet.toArray(new Vector[trainVectorSet.size()]);
     }
 
-    public int[][] imageToGrayScale(BufferedImage image)
-    {
+    public int[][] imageToGrayScale(BufferedImage image) {
         int[][] resultImage = new int[image.getWidth()][image.getHeight()];
-        for(int x = 0; x < image.getWidth(); x++)
-        {
-            for (int y = 0; y < image.getHeight(); y++)
-            {
+        for (int x = 0; x < image.getWidth(); x++) {
+            for (int y = 0; y < image.getHeight(); y++) {
                 Color c = new Color(image.getRGB(x, y));
                 resultImage[x][y] = (c.getRed() + c.getGreen() + c.getBlue()) / 3;
             }
@@ -160,15 +161,12 @@ public class GUI extends JFrame
         return resultImage;
     }
 
-    public BufferedImage grayScaleToImage(int[][] grayImage)
-    {
+    public BufferedImage grayScaleToImage(int[][] grayImage) {
         int height = grayImage[0].length;
         int width = grayImage[1].length;
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
                 Color c = new Color(grayImage[x][y], grayImage[x][y], grayImage[x][y], 0);
                 image.setRGB(x, y, c.getRGB());
             }
@@ -176,15 +174,11 @@ public class GUI extends JFrame
         return image;
     }
 
-
-    public double[] imageToVector(int[][] image)
-    {
+    public double[] imageToVector(int[][] image) {
         double[] resultVector = new double[image[0].length * image[1].length];
         int i = 0;
-        for(int x = 0; x < image.length; x++)
-        {
-            for (int y = 0; y < image.length; y++)
-            {
+        for (int x = 0; x < image.length; x++) {
+            for (int y = 0; y < image.length; y++) {
                 resultVector[i++] = image[x][y];
             }
         }
